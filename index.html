@@ -6,7 +6,7 @@
   <title>Portfolio Reference Landing</title>
   <script>
     // Make the interactive 3D car the primary local experience.
-    if (location.pathname === '/' || location.pathname.endsWith('/index.html')) {
+    if (!location.pathname.endsWith('/chrome-car-drift.html')) {
       location.replace('./chrome-car-drift.html');
     }
   </script>

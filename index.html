@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio Reference Landing</title>
+  <script>
+    // Make the interactive 3D car the primary local experience.
+    if (location.pathname === '/' || location.pathname.endsWith('/index.html')) {
+      location.replace('./chrome-car-drift.html');
+    }
+  </script>
+  <style>
+    :root {
+      --outer: #d9d9d9;
+      --paper: #f1f0e9;
+      --panel: rgba(249, 247, 241, .78);
+      --band: rgba(251, 250, 244, .86);
+      --ink: #141413;
+      --muted: #6b6961;
+      --line: rgba(209, 207, 196, .5);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 32px 18px;
+      background: var(--outer);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    .stage {
+      width: min(649px, calc(100vw - 36px));
+      aspect-ratio: 649 / 970;
+      position: relative;
+    }
+
+    .site {
+      width: 649px;
+      height: 970px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .55);
+      border-radius: 40px;
+      background: var(--paper);
+      box-shadow: 0 24px 42px -24px rgba(0, 0, 0, .06);
+      transform-origin: top left;
+      transform: scale(var(--site-scale, 1));
+    }
+
+    .site::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      opacity: .14;
+      pointer-events: none;
+      background-image:
+        radial-gradient(circle, rgba(20, 20, 19, .38) .48px, transparent .72px),
+        radial-gradient(circle, rgba(255, 255, 255, .9) .55px, transparent .78px);
+      background-size: 17px 17px, 23px 23px;
+      background-position: 0 0, 8px 11px;
+    }
+
+    .hero-panel,
+    .logo-band,
+    .contact-panel {
+      position: absolute;
+      left: -1px;
+      width: 649px;
+      border: 1px solid rgba(255, 255, 255, .75);
+      z-index: 1;
+    }
+
+    .hero-panel {
+      top: -1px;
+      height: 334px;
+      border-radius: 38px;
+      background: var(--panel);
+    }
+
+    .logo-band {
+      top: 333px;
+      height: 124px;
+      background: var(--band);
+      border-color: rgba(255, 255, 255, .5);
+    }
+
+    .contact-panel {
+      top: 737px;
+      height: 188px;
+      border-radius: 38px;
+      background: rgba(251, 250, 244, .84);
+      border-color: rgba(255, 255, 255, .65);
+    }
+
+    .txt,
+    .button,
+    .shape,
+    .service,
+    .logo {
+      position: absolute;
+      z-index: 2;
+    }
+
+    .top-email {
+      left: 40px;
+      top: 31px;
+      width: 120px;
+      font-size: 5.5px;
+      line-height: 1.2;
+      font-weight: 600;
+    }
+
+    .top-links,
+    .footer-links {
+      width: 118px;
+      font-size: 5.5px;
+      line-height: 1.2;
+      font-weight: 600;
+      text-align: right;
+      white-space: pre-wrap;
+    }
+
+    .top-links {
+      left: 503px;
+      top: 31px;
+      width: 118px;
+    }
+
+    .button {
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .72);
+      color: var(--ink);
+      font-size: 8px;
+      line-height: 1;
+      font-weight: 750;
+      text-decoration: none;
+      box-shadow: 0 6px 14px -8px rgba(0, 0, 0, .06);
+    }
+
+    .copy { left: 117px; top: 24px; width: 42px; height: 17px; }
+    .cv { left: 170px; top: 24px; width: 41px; height: 17px; }
+
+    .avatar {
+      left: 296px;
+      top: 81px;
+      width: 53px;
+      height: 53px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: #d7d6d0;
+    }
+
+    .avatar::before {
+      content: "";
+      position: absolute;
+      left: 23px;
+      top: 9px;
+      width: 18px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(20, 20, 19, .72);
+      box-shadow: -8px 0 0 rgba(130, 130, 124, .8);
+    }
+
+    .avatar::after {
+      content: "";
+      position: absolute;
+      left: 7px;
+      bottom: -1px;
+      width: 34px;
+      height: 20px;
+      border-radius: 10px;
+      background: rgba(31, 31, 28, .9);
+    }
+
+    .tag {
+      left: 342px;
+      top: 101px;
+      width: 66px;
+      height: 20px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .9);
+      font-size: 5.5px;
+      font-weight: 750;
+      transform: rotate(-9deg);
+      transform-origin: center;
+      white-space: nowrap;
+    }
+
+    h1 {
+      position: absolute;
+      z-index: 2;
+      left: 204px;
+      top: 157px;
+      width: 240px;
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.12;
+      font-weight: 850;
+      text-align: center;
+    }
+
+    .dark {
+      border: 0;
+      background: var(--ink);
+      color: white;
+      box-shadow: 0 6px 14px -8px rgba(0, 0, 0, .1);
+    }
+
+    .latest { left: 283px; top: 255px; width: 82px; height: 27px; }
+
+    .logo {
+      top: 388px;
+      height: 24px;
+      display: grid;
+      align-items: center;
+      color: var(--ink);
+      font-weight: 800;
+      line-height: 1.1;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .national {
+      left: 44px;
+      width: 78px;
+      grid-template-columns: 14px 1fr;
+      gap: 4px;
+      text-align: left;
+      font-size: 9px;
+      line-height: .88;
+    }
+
+    .national-mark {
+      width: 14px;
+      height: 14px;
+      border-radius: 1px;
+      background: rgba(20, 20, 19, .9);
+    }
+
+    .mattered { left: 143px; width: 88px; font-size: 15px; font-weight: 500; }
+    .coca { left: 252px; width: 75px; font-size: 15px; }
+    .adobe { left: 354px; width: 74px; font-size: 15px; font-weight: 750; }
+    .subway { left: 454px; width: 78px; font-size: 13px; }
+    .codecademy { left: 532px; width: 78px; font-size: 13px; font-weight: 500; white-space: normal; line-height: 1.02; }
+
+    .adobe-mark {
+      left: 334px;
+      top: 388px;
+      width: 8px;
+      height: 18px;
+      border-radius: 1px;
+      background: rgba(20, 20, 19, .9);
+    }
+
+    .section-title {
+      left: 187px;
+      top: 508px;
+      width: 274px;
+      font-size: 14px;
+      line-height: 1.26;
+      font-weight: 750;
+      text-align: center;
+    }
+
+    .divider {
+      position: absolute;
+      z-index: 2;
+      left: 89px;
+      top: 582px;
+      width: 470px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(209,207,196,.5) 0 235px, transparent 235px 265px, rgba(209,207,196,.5) 265px 100%);
+    }
+
+    .service-tab {
+      left: 299px;
+      top: 572px;
+      width: 49px;
+      height: 19px;
+    }
+
+    .service {
+      top: 625px;
+      width: 93px;
+      color: var(--ink);
+    }
+
+    .service.one { left: 104px; }
+    .service.two { left: 223px; }
+    .service.three { left: 342px; }
+    .service.four { left: 461px; }
+
+    .service-icon {
+      width: 16px;
+      height: 16px;
+      border: 1px solid rgba(20, 20, 19, .55);
+      border-radius: 3px;
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    .service-icon::before {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 4px;
+      width: 3px;
+      height: 3px;
+      border-radius: 1.5px;
+      background: rgba(20, 20, 19, .75);
+      box-shadow: 0 6px 0 rgba(20, 20, 19, .72), 7px 6px 0 rgba(20, 20, 19, .55);
+    }
+
+    .service h3 {
+      margin: 0 0 9px;
+      font-size: 8.5px;
+      line-height: 1.2;
+      font-weight: 750;
+    }
+
+    .service p {
+      margin: 0;
+      width: 91px;
+      color: var(--muted);
+      font-size: 6px;
+      line-height: 1.18;
+      font-weight: 400;
+    }
+
+    .hand {
+      left: 307px;
+      top: 776px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .55);
+    }
+
+    .hand::before {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 13px;
+      width: 26px;
+      height: 1px;
+      background: rgba(20, 20, 19, .6);
+      box-shadow: 6px 8px 0 rgba(20, 20, 19, .55), 11px -4px 0 rgba(20, 20, 19, .55);
+    }
+
+    .hand::after {
+      content: "";
+      position: absolute;
+      left: 32px;
+      top: 12px;
+      width: 9px;
+      height: 14px;
+      border-radius: 1px;
+      background: rgba(20, 20, 19, .9);
+    }
+
+    .contact-title {
+      left: 204px;
+      top: 832px;
+      width: 240px;
+      font-size: 20px;
+      line-height: 1.12;
+      font-weight: 850;
+      text-align: center;
+    }
+
+    .email-cta { left: 268px; top: 906px; width: 56px; height: 25px; }
+    .whatsapp-cta { left: 333px; top: 906px; width: 63px; height: 25px; }
+
+    .footer-line {
+      position: absolute;
+      z-index: 2;
+      left: 26px;
+      top: 924px;
+      width: 594px;
+      height: 1px;
+      background: rgba(209, 207, 196, .5);
+    }
+
+    .copyright {
+      left: 30px;
+      top: 947px;
+      width: 140px;
+      font-size: 5.5px;
+      line-height: 1.2;
+      font-weight: 600;
+    }
+
+    .footer-links {
+      left: 503px;
+      top: 947px;
+    }
+
+    @media (max-width: 520px) {
+      body {
+        display: block;
+        min-height: 100vh;
+        padding: 18px;
+      }
+
+      .stage {
+        width: 100%;
+        height: auto;
+        aspect-ratio: auto;
+      }
+
+      .site {
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        position: relative;
+        left: auto;
+        top: auto;
+        overflow: hidden;
+        border-radius: clamp(26px, 9vw, 40px);
+        transform: none;
+      }
+
+      .hero-panel,
+      .logo-band,
+      .contact-panel {
+        display: none;
+      }
+
+      .txt,
+      .button,
+      .shape,
+      .service,
+      .logo,
+      h1,
+      .divider,
+      .footer-line {
+        position: relative;
+        left: auto;
+        right: auto;
+        top: auto;
+        bottom: auto;
+        z-index: 2;
+      }
+
+      .site {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .top-email,
+      .copy,
+      .cv,
+      .top-links,
+      .avatar,
+      .tag,
+      h1,
+      .latest {
+        grid-row: 1;
+      }
+
+      .top-email {
+        width: auto;
+        margin: 28px 0 0 28px;
+        font-size: 10px;
+        line-height: 1.2;
+      }
+
+      .copy {
+        width: 48px;
+        height: 24px;
+        margin: 22px 0 0 46%;
+      }
+
+      .cv {
+        width: 48px;
+        height: 24px;
+        margin: 22px 28px 0 auto;
+      }
+
+      .top-links {
+        width: auto;
+        margin: 63px 28px 0;
+        font-size: 10px;
+        text-align: right;
+      }
+
+      .avatar {
+        width: 58px;
+        height: 58px;
+        margin: 116px auto 0;
+      }
+
+      .tag {
+        width: 72px;
+        height: 22px;
+        margin: 132px calc(50% - 96px) 0 auto;
+        font-size: 6.5px;
+      }
+
+      h1 {
+        width: min(300px, calc(100% - 56px));
+        margin: 194px auto 0;
+        font-size: clamp(25px, 8.3vw, 34px);
+        line-height: 1.08;
+      }
+
+      .latest {
+        width: 108px;
+        height: 34px;
+        margin: 304px auto 42px;
+        font-size: 10px;
+      }
+
+      .national,
+      .mattered,
+      .coca,
+      .adobe-mark,
+      .adobe,
+      .subway,
+      .codecademy {
+        grid-row: 2;
+      }
+
+      .national,
+      .mattered,
+      .coca,
+      .adobe,
+      .subway,
+      .codecademy {
+        width: auto;
+        height: auto;
+        min-height: 28px;
+        font-size: 14px;
+      }
+
+      .national {
+        margin: 34px auto 0 28px;
+        width: 92px;
+        font-size: 9px;
+      }
+
+      .mattered { margin: 34px auto 0 37%; }
+      .coca { margin: 76px auto 0 28px; }
+      .adobe-mark { display: none; }
+      .adobe { margin: 76px auto 0 39%; }
+      .subway { margin: 76px 28px 0 auto; }
+      .codecademy { margin: 34px 28px 34px auto; line-height: 1.05; }
+
+      .section-title,
+      .divider,
+      .service-tab,
+      .service.one,
+      .service.two,
+      .service.three,
+      .service.four {
+        grid-row: 3;
+      }
+
+      .section-title {
+        width: min(310px, calc(100% - 56px));
+        margin: 56px auto 0;
+        font-size: clamp(18px, 5.2vw, 23px);
+        line-height: 1.22;
+      }
+
+      .divider {
+        width: calc(100% - 72px);
+        margin: 40px auto 0;
+        background: linear-gradient(90deg, rgba(209,207,196,.65), rgba(209,207,196,.18));
+      }
+
+      .service-tab {
+        width: 74px;
+        height: 28px;
+        margin: -14px auto 34px;
+        font-size: 10px;
+      }
+
+      .service {
+        width: calc(100% - 36px);
+        align-self: stretch;
+        margin-left: 18px;
+        margin-right: 18px;
+        display: grid;
+        grid-template-columns: 24px minmax(0, 1fr);
+        column-gap: 14px;
+        align-items: start;
+      }
+
+      .service.one { margin-top: 0; }
+      .service.two,
+      .service.three,
+      .service.four { margin-top: 22px; }
+      .service.four { margin-bottom: 54px; }
+
+      .service-icon {
+        width: 20px;
+        height: 20px;
+        margin: 1px 0 0;
+        grid-row: span 2;
+      }
+
+      .service h3 {
+        margin: 0 0 6px;
+        font-size: 13px;
+      }
+
+      .service p {
+        width: auto;
+        font-size: 10px;
+        line-height: 1.35;
+      }
+
+      .hand,
+      .contact-title,
+      .email-cta,
+      .whatsapp-cta {
+        grid-row: 4;
+      }
+
+      .hand {
+        width: 38px;
+        height: 38px;
+        margin: 42px auto 0;
+      }
+
+      .contact-title {
+        width: min(310px, calc(100% - 56px));
+        margin: 24px auto 0;
+        font-size: clamp(25px, 7.6vw, 32px);
+        line-height: 1.08;
+      }
+
+      .email-cta {
+        width: 78px;
+        height: 32px;
+        margin: 28px calc(50% + 6px) 0 auto;
+        font-size: 10px;
+      }
+
+      .whatsapp-cta {
+        width: 86px;
+        height: 32px;
+        margin: -32px auto 48px calc(50% + 6px);
+        font-size: 10px;
+      }
+
+      .footer-line,
+      .copyright,
+      .footer-links {
+        grid-row: 5;
+      }
+
+      .footer-line {
+        width: calc(100% - 56px);
+        margin: 0 auto;
+      }
+
+      .copyright {
+        width: auto;
+        margin: 20px 28px 0;
+        font-size: 9px;
+      }
+
+      .footer-links {
+        width: auto;
+        margin: 10px 28px 26px;
+        font-size: 9px;
+        text-align: left;
+      }
+
+      .button {
+        font-size: 10px;
+      }
+
+      .site {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px 22px 26px;
+        gap: 0;
+      }
+
+      .top-email { order: 1; align-self: flex-start; margin: 0; }
+      .copy { order: 2; align-self: flex-end; margin: -21px 34px 0 0; }
+      .cv { order: 3; align-self: flex-end; margin: -24px 0 0 0; }
+      .top-links { order: 4; align-self: flex-end; margin: 18px 0 0; text-align: right; }
+      .avatar { order: 5; margin: 34px auto 0; }
+      .tag { order: 6; margin: -40px calc(50% - 118px) 0 auto; }
+      h1 { order: 7; margin: 38px auto 0; }
+      .latest { order: 8; margin: 24px auto 42px; }
+
+      .national { order: 9; align-self: flex-start; margin: 0; }
+      .mattered { order: 10; align-self: flex-end; margin: -26px 44px 0 0; }
+      .coca { order: 11; align-self: flex-start; margin: 28px 0 0; }
+      .adobe { order: 12; align-self: center; margin: -28px 0 0; }
+      .subway { order: 13; align-self: flex-end; margin: -28px 0 0; }
+      .codecademy { order: 14; align-self: center; margin: 26px 0 40px; }
+
+      .section-title { order: 15; margin: 0 auto; }
+      .divider { order: 16; margin: 34px auto 0; }
+      .service-tab { order: 17; margin: -14px auto 34px; }
+      .service.one { order: 18; margin-top: 0; }
+      .service.two { order: 19; }
+      .service.three { order: 20; }
+      .service.four { order: 21; margin-bottom: 50px; }
+
+      .service.one,
+      .service.two,
+      .service.three,
+      .service.four {
+        left: auto;
+      }
+
+      .hand { order: 22; margin: 0 auto; }
+      .contact-title { order: 23; margin: 22px auto 0; }
+      .email-cta { order: 24; margin: 26px calc(50% + 6px) 0 auto; }
+      .whatsapp-cta { order: 25; margin: -32px auto 46px calc(50% + 6px); }
+      .footer-line { order: 26; margin: 0 auto; }
+      .copyright { order: 27; align-self: flex-start; margin: 18px 0 0; }
+      .footer-links { order: 28; align-self: flex-start; margin: 10px 0 0; text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <main class="site" aria-label="Portfolio landing page">
+      <div class="hero-panel"></div>
+      <div class="logo-band"></div>
+      <div class="contact-panel"></div>
+
+      <div class="txt top-email">taewooyim@gmail.com</div>
+      <a class="button copy" href="mailto:taewooyim@gmail.com">Copy</a>
+      <a class="button cv" href="#">CV</a>
+      <div class="txt top-links">Linkedin  /  Dribbble  /  Instagram</div>
+
+      <div class="shape avatar"></div>
+      <div class="shape tag">Kept ahead *</div>
+      <h1>Building digital<br>products, brands, and<br>experience.</h1>
+      <a class="button dark latest" href="#work">Latest Shots&nbsp;&nbsp;→</a>
+
+      <div class="logo national"><span class="national-mark"></span><span>NATIONAL<br>BANK</span></div>
+      <div class="logo mattered">mattered`</div>
+      <div class="logo coca">CocaCola</div>
+      <div class="shape adobe-mark"></div>
+      <div class="logo adobe">Adobe</div>
+      <div class="logo subway">SUBWAY</div>
+      <div class="logo codecademy">code|<br>cademy</div>
+
+      <div class="txt section-title" id="work">Collaborate with brands and agencies<br>to create impactful results.</div>
+      <div class="divider"></div>
+      <div class="button service-tab">Service</div>
+
+      <article class="service one">
+        <div class="service-icon"></div>
+        <h3>UX &amp; UI</h3>
+        <p>Designing interfaces that are intuitive, efficient, and enjoyable to use.</p>
+      </article>
+      <article class="service two">
+        <div class="service-icon"></div>
+        <h3>Web &amp; Mobile App</h3>
+        <p>Transforming ideas into user-friendly web and mobile app experiences.</p>
+      </article>
+      <article class="service three">
+        <div class="service-icon"></div>
+        <h3>Design &amp; Creative</h3>
+        <p>Crafting visually stunning designs that connect with your audience.</p>
+      </article>
+      <article class="service four">
+        <div class="service-icon"></div>
+        <h3>Development</h3>
+        <p>Bringing your vision to life with the latest technology and design trends.</p>
+      </article>
+
+      <div class="shape hand"></div>
+      <div class="txt contact-title">Tell me about your next<br>project</div>
+      <a class="button dark email-cta" href="mailto:taewooyim@gmail.com">Email Me</a>
+      <a class="button whatsapp-cta" href="#">WhatsApp</a>
+
+      <div class="footer-line"></div>
+      <div class="txt copyright">© 2024 All rights reserved.</div>
+      <div class="txt footer-links">Linkedin  /  Dribbble  /  Instagram</div>
+    </main>
+  </div>
+  <script>
+    const stage = document.querySelector('.stage');
+    const site = document.querySelector('.site');
+    function fitSite() {
+      if (window.innerWidth <= 520) {
+        stage.style.width = '';
+        stage.style.height = '';
+        site.style.removeProperty('--site-scale');
+        return;
+      }
+      const available = Math.min(649, window.innerWidth - 36);
+      const scale = Math.max(0.36, available / 649);
+      stage.style.width = `${649 * scale}px`;
+      stage.style.height = `${970 * scale}px`;
+      site.style.setProperty('--site-scale', scale);
+    }
+    fitSite();
+    window.addEventListener('resize', fitSite);
+  </script>
+</body>
+</html>

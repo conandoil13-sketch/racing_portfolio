@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chrome Car Drift</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #050505; }
+    body {
+      height: 24000px;
+      overflow-x: hidden;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      cursor: default;
+      background:
+        radial-gradient(circle at 18% 16%, rgba(214,255,105,.18), transparent 26rem),
+        radial-gradient(circle at 82% 10%, rgba(117,199,255,.14), transparent 28rem),
+        radial-gradient(circle at 48% 82%, rgba(255,111,97,.14), transparent 30rem),
+        #050505;
+    }
+
+    #labels {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 2;
+    }
+
+    .car-label {
+      position: absolute;
+      left: 0;
+      top: 0;
+      max-width: min(44vw, 18rem);
+      padding: .42rem .62rem;
+      border-radius: 999px;
+      background: rgba(5, 5, 8, .2);
+      color: rgba(255, 255, 255, .92);
+      box-shadow: 0 0 .55rem rgba(117, 199, 255, .06), inset 0 0 .45rem rgba(255, 255, 255, .04);
+      backdrop-filter: blur(10px);
+      font-size: clamp(.62rem, 1.25vw, .82rem);
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0;
+      text-align: center;
+      filter: brightness(.48) saturate(.68);
+      text-shadow: 0 0 .25rem currentColor;
+      white-space: nowrap;
+      transform: translate(-50%, -100%);
+      transition: opacity .18s ease, filter .18s ease, background .18s ease, box-shadow .18s ease;
+      will-change: transform, opacity, filter;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .car-label.is-hovered,
+    .car-label:hover {
+      background: rgba(5, 5, 8, .46);
+      box-shadow: 0 0 1.6rem currentColor, inset 0 0 .9rem rgba(255, 255, 255, .1);
+      filter: brightness(1.45) saturate(1.25);
+      text-shadow: 0 0 .85rem currentColor;
+    }
+
+    .scroll-space {
+      height: 24000px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  <div id="labels" aria-hidden="true"></div>
+  <div class="scroll-space" aria-hidden="true"></div>
+
+  <script type="module">
+    import * as THREE from 'https://esm.sh/three@0.179.1';
+    import { GLTFLoader } from 'https://esm.sh/three@0.179.1/examples/jsm/loaders/GLTFLoader.js';
+
+    const canvas = document.getElementById('stage');
+    const labelLayer = document.getElementById('labels');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.setClearColor(0x050505, 1);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x050505, .035);
+
+    const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, .1, 140);
+    camera.position.set(0, 3.1, 14);
+
+    const cubeTarget = new THREE.WebGLCubeRenderTarget(512);
+    const cubeScene = new THREE.Scene();
+    const cubeCamera = new THREE.CubeCamera(.1, 1000, cubeTarget);
+
+    function addEnvPanel({ color, position, rotation = [0, 0, 0], size = [70, 70], opacity = 1 }) {
+      const panel = new THREE.Mesh(
+        new THREE.PlaneGeometry(size[0], size[1]),
+        new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity })
+      );
+      panel.position.set(position[0], position[1], position[2]);
+      panel.rotation.set(rotation[0], rotation[1], rotation[2]);
+      cubeScene.add(panel);
+      return panel;
+    }
+
+    [
+      { color: 0x03030a, position: [35, 0, 0], rotation: [0, -Math.PI / 2, 0] },
+      { color: 0x04010a, position: [-35, 0, 0], rotation: [0, Math.PI / 2, 0] },
+      { color: 0x080814, position: [0, 35, 0], rotation: [Math.PI / 2, 0, 0] },
+      { color: 0x090806, position: [0, -35, 0], rotation: [-Math.PI / 2, 0, 0] },
+      { color: 0x05030a, position: [0, 0, 35], rotation: [0, Math.PI, 0] },
+      { color: 0x01020a, position: [0, 0, -35] },
+    ].forEach(addEnvPanel);
+
+    const neonStrips = [
+      0x75c7ff, 0xd6ff69, 0xff3b8d, 0x7c5cff, 0xffffff, 0xff8c42,
+    ];
+    for (let side = 0; side < 4; side++) {
+      const isX = side < 2;
+      const sign = side % 2 === 0 ? 1 : -1;
+      for (let i = 0; i < 42; i++) {
+        const color = neonStrips[(i + side) % neonStrips.length];
+        const tall = i % 3 !== 0;
+        const size = tall ? [.45 + (i % 4) * .18, 5 + (i % 5) * 2.2] : [3 + (i % 5) * .55, .42];
+        const u = -27 + (i * 1.37) % 54;
+        const v = -10 + (i * 3.11) % 32;
+        const depth = 34.5;
+        const position = isX ? [sign * depth, v, u] : [u, v, sign * depth];
+        const rotation = isX ? [0, -sign * Math.PI / 2, 0] : [0, sign > 0 ? Math.PI : 0, 0];
+        addEnvPanel({ color, position, rotation, size, opacity: tall ? .92 : .78 });
+      }
+    }
+
+    for (let i = 0; i < 24; i++) {
+      const color = i % 2 ? 0x75c7ff : 0xff3b8d;
+      addEnvPanel({
+        color,
+        position: [-24 + i * 2.1, -12.5, -18 + (i % 6) * 6],
+        rotation: [-Math.PI / 2, 0, (i % 4) * .24],
+        size: [9 + (i % 3) * 3, .22],
+        opacity: .72,
+      });
+    }
+
+    cubeCamera.update(renderer, cubeScene);
+    scene.environment = cubeTarget.texture;
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x111111, 1.4));
+    const key = new THREE.DirectionalLight(0xffffff, 4.5);
+    key.position.set(4, 9, 6);
+    scene.add(key);
+    const neonBlue = new THREE.PointLight(0x75c7ff, 45, 30);
+    neonBlue.position.set(-5, 2, 1);
+    scene.add(neonBlue);
+    const neonRed = new THREE.PointLight(0xff6f61, 36, 30);
+    neonRed.position.set(5, 1.2, -2);
+    scene.add(neonRed);
+
+    const road = new THREE.Mesh(
+      new THREE.PlaneGeometry(42, 120, 1, 1),
+      new THREE.MeshStandardMaterial({
+        color: 0x09090d,
+        metalness: .42,
+        roughness: .24,
+        envMap: cubeTarget.texture,
+        envMapIntensity: .38
+      })
+    );
+    road.rotation.x = -Math.PI / 2;
+    road.position.y = -1.18;
+    road.position.z = -22;
+    scene.add(road);
+
+    const laneMaterial = new THREE.MeshBasicMaterial({ color: 0xd6ff69, transparent: true, opacity: .62 });
+    const laneGroup = new THREE.Group();
+    for (let i = 0; i < 18; i++) {
+      const line = new THREE.Mesh(new THREE.PlaneGeometry(.08, 2.8), laneMaterial);
+      line.rotation.x = -Math.PI / 2;
+      line.position.set(0, -1.165, 8 - i * 6.2);
+      laneGroup.add(line);
+    }
+    scene.add(laneGroup);
+
+    // NEON_CITY_BLOCK_START: remove or set cityGroup.visible = false to disable the fake neon buildings.
+    const cityGroup = new THREE.Group();
+    cityGroup.visible = true;
+    const buildingMaterial = new THREE.MeshStandardMaterial({
+      color: 0x06070a,
+      metalness: .34,
+      roughness: .5,
+      envMap: cubeTarget.texture,
+      envMapIntensity: .52,
+    });
+    const windowMaterials = [
+      new THREE.MeshBasicMaterial({ color: 0x75c7ff, transparent: true, opacity: .42 }),
+      new THREE.MeshBasicMaterial({ color: 0xff3b8d, transparent: true, opacity: .36 }),
+      new THREE.MeshBasicMaterial({ color: 0xd6ff69, transparent: true, opacity: .3 }),
+      new THREE.MeshBasicMaterial({ color: 0x7c5cff, transparent: true, opacity: .38 }),
+    ];
+
+    function addNeonBuilding(side, index, z) {
+      const width = 1.2 + (index % 4) * .5;
+      const height = 3.2 + ((index * 7) % 11) * .52;
+      const depth = 1.1 + (index % 3) * .45;
+      const x = side * (11 + (index % 5) * 1.15);
+      const building = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), buildingMaterial.clone());
+      building.position.set(x, -1.18 + height / 2, z);
+      building.rotation.y = side * (.08 + (index % 4) * .025);
+      cityGroup.add(building);
+
+      const rows = Math.max(2, Math.floor(height / 1.2));
+      const cols = Math.max(1, Math.floor(width / .52));
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          if ((row + col + index) % 3 === 0) continue;
+          const win = new THREE.Mesh(new THREE.PlaneGeometry(.18, .34), windowMaterials[(row + col + index) % windowMaterials.length]);
+          win.position.set(
+            x - side * (width / 2 + .012),
+            -.25 + row * .72,
+            z - depth / 2 + .25 + col * .42
+          );
+          win.rotation.y = side * Math.PI / 2;
+          cityGroup.add(win);
+        }
+      }
+    }
+
+    for (let i = 0; i < 32; i++) {
+      const z = 6 - i * 4.4;
+      addNeonBuilding(-1, i, z);
+      addNeonBuilding(1, i + 32, z - 1.9);
+    }
+    scene.add(cityGroup);
+    // NEON_CITY_BLOCK_END
+
+    const loader = new GLTFLoader();
+    const carSpecs = [
+      { name: 'Life of Graphics', url: 'https://conandoil13-sketch.github.io/daily_graphics_landing/#access', file: './assets/cars/race-future.glb', scale: 1.12, offset: .02, lane: -3.4, bodyColor: 0xe6e4dc, accentColor: 0xffffff, sway: 1.0, envBoost: 4.4 },
+      { name: 'Designer ORPG', url: 'https://conandoil13-sketch.github.io/trig_graphics/', file: './assets/cars/race-future.glb', scale: .98, offset: .20, lane: 2.9, bodyColor: 0xffc75f, accentColor: 0xd6ff69, sway: -1.15, envBoost: 4.7 },
+      { name: '8t Truck', url: 'https://conandoil13-sketch.github.io/8ton-truck/', file: './assets/cars/race-future.glb', scale: 1.06, offset: .42, lane: -2.2, bodyColor: 0xff4b45, accentColor: 0xffb199, sway: .86, envBoost: 4.65 },
+      { name: 'Pokemon', url: 'https://conandoil13-sketch.github.io/poke-voice/', file: './assets/cars/race-future.glb', scale: .92, offset: .62, lane: 3.7, bodyColor: 0x17191f, accentColor: 0x7c5cff, sway: -1.05, envBoost: 5.7 },
+      { name: 'Instagram', url: 'https://www.instagram.com/l4prds/', file: './assets/cars/race-future.glb', scale: 1.0, offset: .80, lane: -.35, bodyColor: 0x5fb7ff, accentColor: 0x75c7ff, sway: .72, envBoost: 4.9 },
+    ];
+
+    const cars = [];
+    const labelPosition = new THREE.Vector3();
+    const pointer = new THREE.Vector2();
+    const raycaster = new THREE.Raycaster();
+    let hoveredCar = null;
+    let hoveredLabelName = '';
+
+    function normalizeModel(object, targetScale) {
+      const box = new THREE.Box3().setFromObject(object);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      object.position.sub(center);
+      const maxAxis = Math.max(size.x, size.y, size.z) || 1;
+      object.scale.setScalar((3.5 / maxAxis) * targetScale);
+      return object;
+    }
+
+    function applyChrome(object, bodyColor, accentColor, envBoost) {
+      const chrome = new THREE.MeshPhysicalMaterial({
+        color: bodyColor,
+        metalness: 1,
+        roughness: .085,
+        envMap: cubeTarget.texture,
+        envMapIntensity: envBoost,
+        clearcoat: 1,
+        clearcoatRoughness: .032,
+        reflectivity: 1,
+        ior: 2.25,
+      });
+      const dark = new THREE.MeshPhysicalMaterial({
+        color: 0x191916,
+        metalness: 1,
+        roughness: .18,
+        envMap: cubeTarget.texture,
+        envMapIntensity: 2.2,
+        clearcoat: .9,
+      });
+      const accent = new THREE.MeshPhysicalMaterial({
+        color: accentColor,
+        metalness: .92,
+        roughness: .18,
+        envMap: cubeTarget.texture,
+        envMapIntensity: 3.2,
+        clearcoat: 1,
+        clearcoatRoughness: .07,
+      });
+      object.traverse((child) => {
+        if (!child.isMesh) return;
+        const name = `${child.name || ''} ${child.material?.name || ''}`.toLowerCase();
+        if (name.includes('wheel') || name.includes('tire') || name.includes('tyre')) child.material = dark.clone();
+        else if (name.includes('window') || name.includes('glass') || name.includes('light')) child.material = accent.clone();
+        else child.material = chrome.clone();
+      });
+    }
+
+    function openCarLink(car) {
+      if (!car?.url) return;
+      location.href = car.url;
+    }
+
+    function createCarLabel(spec) {
+      const label = document.createElement('div');
+      label.className = 'car-label';
+      label.textContent = spec.name;
+      label.style.color = `#${spec.accentColor.toString(16).padStart(6, '0')}`;
+      label.style.opacity = '0';
+      label.addEventListener('pointerenter', () => { hoveredLabelName = spec.name; });
+      label.addEventListener('pointerleave', () => { if (hoveredLabelName === spec.name) hoveredLabelName = ''; });
+      label.addEventListener('click', () => openCarLink(spec));
+      labelLayer.append(label);
+      return label;
+    }
+
+    async function loadCars() {
+      await Promise.all(carSpecs.map(async (spec, index) => {
+        const gltf = await loader.loadAsync(spec.file);
+        const car = normalizeModel(gltf.scene, spec.scale);
+        applyChrome(car, spec.bodyColor, spec.accentColor, spec.envBoost);
+        car.rotation.y = Math.PI;
+        scene.add(car);
+        cars[index] = { mesh: car, label: createCarLabel(spec), ...spec };
+      }));
+    }
+
+    function findCarFromObject(object) {
+      return cars.find((car) => car?.mesh?.visible && (object === car.mesh || car.mesh.children.includes(object) || car.mesh.getObjectById(object.id)));
+    }
+
+    function getCarAtPointer(event) {
+      pointer.x = (event.clientX / innerWidth) * 2 - 1;
+      pointer.y = -(event.clientY / innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const meshes = cars.flatMap((car) => car?.mesh?.visible ? [car.mesh] : []);
+      const hits = raycaster.intersectObjects(meshes, true);
+      if (!hits.length) return null;
+      return findCarFromObject(hits[0].object);
+    }
+
+    function updatePointerCursor(event) {
+      hoveredCar = getCarAtPointer(event);
+      canvas.style.cursor = hoveredCar ? 'pointer' : 'default';
+    }
+
+    function handlePointerClick(event) {
+      const car = getCarAtPointer(event);
+      if (car) openCarLink(car);
+    }
+
+    const loopDistance = 4700;
+    let targetProgress = 0;
+    let smoothProgress = 0;
+    let virtualScroll = 0;
+    let lastScrollY = 0;
+    let isRecentering = false;
+
+    function wrap01(value) {
+      return ((value % 1) + 1) % 1;
+    }
+
+    function centerScroll() {
+      const max = document.documentElement.scrollHeight - innerHeight;
+      const center = Math.round(max / 2);
+      isRecentering = true;
+      scrollTo(0, center);
+      lastScrollY = center;
+      requestAnimationFrame(() => { isRecentering = false; });
+    }
+
+    function updateScroll() {
+      if (isRecentering) return;
+      const max = document.documentElement.scrollHeight - innerHeight;
+      const y = scrollY;
+      const delta = y - lastScrollY;
+      virtualScroll += delta;
+      lastScrollY = y;
+      targetProgress = virtualScroll / loopDistance;
+
+      if (y < innerHeight * 2 || y > max - innerHeight * 2) {
+        centerScroll();
+      }
+    }
+
+    function driftCurve(t) {
+      return Math.sin(t * Math.PI * 2);
+    }
+
+    function animate(time) {
+      smoothProgress += (targetProgress - smoothProgress) * .075;
+      const cycle = smoothProgress;
+      const p = wrap01(cycle);
+      const cameraWave = cycle * Math.PI * 2;
+      const driftEnergy = .5 + .5 * Math.sin(cameraWave - Math.PI / 2);
+
+      camera.position.x = Math.sin(cameraWave) * 1.2;
+      camera.position.y = 3.0 + Math.sin(cycle * Math.PI * 3) * .3;
+      camera.position.z = 15.4 - driftEnergy * .9;
+      camera.lookAt(Math.sin(cameraWave + .5) * .8, .2, -8.5 - driftEnergy * 4.2);
+
+      laneGroup.position.z = ((cycle * 46) % 6.2 + 6.2) % 6.2;
+      road.position.z = -22 + Math.sin(cameraWave) * 2;
+      // NEON_CITY_BLOCK_ANIMATION_START: keeps the fake city sliding with the road loop.
+      cityGroup.position.z = ((cycle * 18) % 8.8 + 8.8) % 8.8;
+      cityGroup.position.x = Math.sin(cameraWave + .8) * .65;
+      // NEON_CITY_BLOCK_ANIMATION_END
+
+      cars.forEach((car, index) => {
+        const phase = wrap01(cycle * .82 + car.offset);
+        const pass = phase * 2 - 1;
+        const sideways = driftCurve(phase) * (1.65 + index * .1) * car.sway;
+        const z = THREE.MathUtils.lerp(20, -36, phase);
+        const x = car.lane + sideways + pass * .35 * car.sway;
+        const driftTurn = Math.sin(phase * Math.PI) * car.sway;
+        const yaw = Math.PI + sideways * .16 + driftTurn * .72;
+        const bank = sideways * -.055;
+
+        car.mesh.position.set(x, -1.02 + Math.sin(phase * Math.PI) * .08, z);
+        car.mesh.rotation.set(bank, yaw, driftCurve(phase) * .06 * car.sway);
+        car.mesh.visible = phase > .015 && phase < .985;
+
+        labelPosition.copy(car.mesh.position);
+        labelPosition.y += 1.55;
+        labelPosition.project(camera);
+        const onScreen = car.mesh.visible && labelPosition.z > -1 && labelPosition.z < 1;
+        const labelX = (labelPosition.x * .5 + .5) * innerWidth;
+        const labelY = (-labelPosition.y * .5 + .5) * innerHeight;
+        const edgePad = 48;
+        const inFrame = labelX > -edgePad && labelX < innerWidth + edgePad && labelY > -edgePad && labelY < innerHeight + edgePad;
+        const distanceFade = THREE.MathUtils.clamp((23 - car.mesh.position.z) / 38, .36, 1);
+        const isHovered = hoveredCar === car || hoveredLabelName === car.name;
+        const labelOpacity = isHovered ? Math.min(1, distanceFade + .18) : distanceFade * .38;
+
+        car.label.classList.toggle('is-hovered', isHovered);
+        car.label.style.opacity = onScreen && inFrame ? String(labelOpacity) : '0';
+        car.label.style.transform = `translate3d(${labelX}px, ${labelY}px, 0) translate(-50%, -100%) scale(${THREE.MathUtils.lerp(.72, 1.05, distanceFade)})`;
+      });
+
+      neonBlue.intensity = 34 + Math.sin(time * .002) * 12 + driftEnergy * 20;
+      neonRed.intensity = 28 + Math.cos(time * .0022) * 10 + driftEnergy * 18;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    function resize() {
+      renderer.setSize(innerWidth, innerHeight, false);
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+    }
+
+    addEventListener('resize', resize);
+    addEventListener('scroll', updateScroll, { passive: true });
+    canvas.addEventListener('pointermove', updatePointerCursor, { passive: true });
+    canvas.addEventListener('pointerleave', () => { hoveredCar = null; canvas.style.cursor = 'default'; });
+    canvas.addEventListener('click', handlePointerClick);
+    resize();
+    centerScroll();
+    updateScroll();
+    await loadCars();
+    animate(0);
+  </script>
+</body>
+</html>

@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scroll 3D Library Lab</title>
+  <style>
+    :root {
+      --bg: #10100e;
+      --paper: #f4f1e8;
+      --ink: #161611;
+      --muted: #777266;
+      --line: rgba(255,255,255,.16);
+      --accent: #d7ff6f;
+      --orange: #ff9868;
+      --blue: #7dd3ff;
+      --violet: #c7a0ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: auto;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 18% 8%, rgba(215,255,111,.18), transparent 24rem),
+        radial-gradient(circle at 88% 14%, rgba(125,211,255,.14), transparent 24rem),
+        var(--bg);
+      color: var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    a { color: inherit; }
+
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      align-content: center;
+      gap: 28px;
+      padding: clamp(28px, 7vw, 84px);
+      position: relative;
+    }
+
+    .eyebrow {
+      width: fit-content;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 9px 13px;
+      color: var(--accent);
+      background: rgba(255,255,255,.05);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    h1 {
+      max-width: 820px;
+      margin: 0;
+      font-size: clamp(42px, 8vw, 96px);
+      line-height: .92;
+      font-weight: 900;
+      overflow-wrap: anywhere;
+      word-break: keep-all;
+    }
+
+    .hero p {
+      max-width: 660px;
+      margin: 0;
+      color: rgba(244,241,232,.74);
+      font-size: clamp(16px, 2vw, 21px);
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 11px 16px;
+      background: rgba(255,255,255,.06);
+      color: var(--paper);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .button.primary {
+      border-color: transparent;
+      background: var(--accent);
+      color: var(--ink);
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      max-width: 980px;
+    }
+
+    .status {
+      min-height: 62px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255,255,255,.05);
+    }
+
+    .status strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 7px;
+    }
+
+    .status span {
+      color: rgba(244,241,232,.68);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .ok strong::after { content: " loaded"; color: var(--accent); margin-left: 6px; font-weight: 800; }
+    .fail strong::after { content: " fallback"; color: var(--orange); margin-left: 6px; font-weight: 800; }
+    .info strong::after { content: " pattern"; color: var(--blue); margin-left: 6px; font-weight: 800; }
+
+    .scene-wrap {
+      min-height: 560vh;
+      position: relative;
+      border-top: 1px solid var(--line);
+      padding-right: min(470px, 40vw);
+    }
+
+    .sticky-scene {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr);
+      gap: clamp(18px, 3vw, 44px);
+      align-items: center;
+      padding: clamp(18px, 5vw, 64px);
+      overflow: hidden;
+    }
+
+    .canvas-shell {
+      height: min(68vh, 680px);
+      min-height: 360px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      overflow: hidden;
+      position: fixed;
+      right: clamp(16px, 3vw, 34px);
+      bottom: clamp(16px, 3vw, 34px);
+      width: min(420px, calc(100vw - 32px));
+      height: min(320px, 42vh);
+      min-height: 220px;
+      z-index: 30;
+      box-shadow: 0 28px 90px rgba(0,0,0,.45);
+      backdrop-filter: blur(16px);
+      background:
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,.08), transparent 34%),
+        #070706;
+    }
+
+    .canvas-anchor {
+      min-height: min(68vh, 680px);
+      border: 1px dashed rgba(255,255,255,.14);
+      border-radius: 28px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+    }
+
+    .canvas-anchor::before {
+      content: "3D asset is floating";
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: min(68vh, 680px);
+      min-height: 360px;
+      color: rgba(244,241,232,.48);
+      font-weight: 850;
+      letter-spacing: .02em;
+    }
+
+    .canvas-shell::after {
+      content: "floating 3D asset";
+      position: absolute;
+      left: 16px;
+      top: 14px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(7,7,6,.58);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 850;
+      pointer-events: none;
+    }
+
+    @keyframes floatIn {
+      from { opacity: .3; transform: translateY(18px) scale(.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    #threeCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .hud {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      display: grid;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .progress {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      overflow: hidden;
+    }
+
+    .progress i {
+      display: block;
+      width: calc(var(--progress, 0) * 100%);
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--blue), var(--violet));
+    }
+
+    .hud-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      color: rgba(244,241,232,.76);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .explain {
+      display: grid;
+      gap: 18px;
+    }
+
+    .explain h2 {
+      margin: 0;
+      font-size: clamp(32px, 5vw, 60px);
+      line-height: .98;
+    }
+
+    .explain p {
+      margin: 0;
+      color: rgba(244,241,232,.72);
+      font-size: 16px;
+      line-height: 1.55;
+      max-width: 520px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      max-width: 520px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255,255,255,.05);
+    }
+
+    .metric b {
+      display: block;
+      color: var(--accent);
+      font-size: 22px;
+      line-height: 1;
+      margin-bottom: 7px;
+    }
+
+    .metric small {
+      color: rgba(244,241,232,.62);
+      font-weight: 750;
+    }
+
+    .sections {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      gap: 22vh;
+      padding: 0 clamp(18px, 5vw, 64px) 42vh;
+      pointer-events: none;
+    }
+
+    .library-card {
+      pointer-events: auto;
+      width: min(520px, 100%);
+      min-height: 220px;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 28px;
+      padding: clamp(20px, 4vw, 34px);
+      background: rgba(244,241,232,.9);
+      color: var(--ink);
+      box-shadow: 0 24px 80px rgba(0,0,0,.28);
+      backdrop-filter: blur(18px);
+    }
+
+    .library-card:nth-child(even) {
+      justify-self: end;
+    }
+
+    .library-card h3 {
+      margin: 0 0 12px;
+      font-size: clamp(28px, 4vw, 44px);
+      line-height: .95;
+    }
+
+    .library-card p {
+      margin: 0 0 18px;
+      color: #5c584e;
+      line-height: 1.55;
+      font-size: 15px;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(22,22,17,.08);
+      color: #37342d;
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .babylon-panel {
+      min-height: 92vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(18px, 4vw, 48px);
+      align-items: center;
+      padding: clamp(18px, 5vw, 64px);
+      border-top: 1px solid var(--line);
+    }
+
+    .babylon-copy h2 {
+      margin: 0 0 18px;
+      font-size: clamp(34px, 6vw, 72px);
+      line-height: .95;
+    }
+
+    .babylon-copy p {
+      color: rgba(244,241,232,.72);
+      line-height: 1.6;
+      margin: 0;
+      max-width: 540px;
+    }
+
+    .babylon-shell {
+      min-height: 440px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      overflow: hidden;
+      background: #090907;
+      position: relative;
+    }
+
+    #babylonCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    .footer {
+      padding: 40px clamp(18px, 5vw, 64px) 70px;
+      color: rgba(244,241,232,.58);
+      border-top: 1px solid var(--line);
+    }
+
+    @media (max-width: 820px) {
+      .sticky-scene,
+      .babylon-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .sticky-scene {
+        position: relative;
+        height: auto;
+        min-height: 100vh;
+      }
+
+      .scene-wrap {
+        min-height: auto;
+        padding-right: 0;
+      }
+
+      .sections {
+        gap: 28px;
+        padding-top: 24px;
+      }
+
+      .library-card,
+      .library-card:nth-child(even) {
+        justify-self: stretch;
+        width: auto;
+      }
+
+      .canvas-shell {
+        width: calc(100vw - 28px);
+        height: 240px;
+        min-height: 220px;
+        right: 14px;
+        bottom: 14px;
+      }
+
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="eyebrow">Scroll 3D Library Lab</div>
+    <h1>스크롤로 3D 오브젝트를 움직이는 라이브러리 테스트</h1>
+    <p>Three.js, GSAP ScrollTrigger, Lenis, Babylon.js, Motion, Spline, React Three Fiber/Drei, Theatre.js, TresJS를 한 페이지에서 비교합니다. 스크롤하면 캔버스 오브젝트가 이동, 회전, 스케일, 색상 변화합니다.</p>
+    <div class="toolbar">
+      <a class="button primary" href="#lab">테스트 시작</a>
+      <button class="button" id="toggleLenis" type="button">Lenis smooth: on</button>
+      <button class="button" id="resetView" type="button">맨 위로</button>
+    </div>
+    <div class="status-grid" id="statusGrid">
+      <div class="status" data-lib="three"><strong>Three.js</strong><span>WebGL scene</span></div>
+      <div class="status" data-lib="gsap"><strong>GSAP ScrollTrigger</strong><span>scrub timeline</span></div>
+      <div class="status" data-lib="lenis"><strong>Lenis</strong><span>smooth native scroll</span></div>
+      <div class="status" data-lib="motion"><strong>Motion</strong><span>scroll values pattern</span></div>
+      <div class="status" data-lib="babylon"><strong>Babylon.js</strong><span>second engine demo</span></div>
+      <div class="status info" data-lib="spline"><strong>Spline</strong><span>visual 3D authoring + scroll events</span></div>
+      <div class="status info" data-lib="r3f"><strong>R3F + Drei</strong><span>React ScrollControls pattern</span></div>
+      <div class="status info" data-lib="theatre"><strong>Theatre.js</strong><span>timeline scrub pattern</span></div>
+      <div class="status info" data-lib="tres"><strong>TresJS</strong><span>Vue + Three pattern</span></div>
+    </div>
+  </header>
+
+  <main id="lab">
+    <section class="scene-wrap" id="threeLab">
+      <div class="sticky-scene">
+        <div class="canvas-anchor" aria-hidden="true"></div>
+        <div class="canvas-shell">
+          <canvas id="threeCanvas"></canvas>
+          <div class="hud">
+            <div class="progress"><i id="progressBar"></i></div>
+            <div class="hud-label"><span id="activeLib">ready</span><span id="progressText">0%</span></div>
+          </div>
+        </div>
+        <div class="explain">
+          <h2>하나의 스크롤 진행률로 여러 3D 속성을 구동</h2>
+          <p>GSAP ScrollTrigger가 섹션의 스크롤 값을 계산하고, Three.js 씬의 카메라/메시/머티리얼 값을 바꿉니다. Lenis가 켜져 있으면 스크롤 감각만 부드러워지고, 애니메이션 진행률은 계속 같은 값으로 동기화됩니다.</p>
+          <div class="metric-grid">
+            <div class="metric"><b id="mProgress">0%</b><small>scroll progress</small></div>
+            <div class="metric"><b id="mRotation">0.0</b><small>mesh rotation</small></div>
+            <div class="metric"><b id="mMode">Three</b><small>active driver</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sections">
+        <article class="library-card" data-step="Three.js">
+          <h3>Three.js</h3>
+          <p>가장 기본이 되는 WebGL 렌더링 엔진입니다. 스크롤 값으로 메시의 위치, 회전, 스케일, 셰이더 uniform, 카메라를 직접 업데이트하기 좋습니다.</p>
+          <div class="tags"><span class="tag">maximum control</span><span class="tag">GLTF/GLB</span><span class="tag">manual loop</span></div>
+        </article>
+        <article class="library-card" data-step="GSAP">
+          <h3>GSAP ScrollTrigger</h3>
+          <p>스크롤 구간, pin, scrub, snap을 안정적으로 제어합니다. 3D 오브젝트 자체는 Three.js가 만들고, ScrollTrigger는 타임라인과 진행률을 책임지는 조합이 강합니다.</p>
+          <div class="tags"><span class="tag">scrub</span><span class="tag">pin</span><span class="tag">matchMedia</span></div>
+        </article>
+        <article class="library-card" data-step="Lenis">
+          <h3>Lenis</h3>
+          <p>모션 라이브러리라기보다 스크롤 엔진입니다. WebGL, GSAP, parallax가 같은 프레임 루프에서 자연스럽게 움직이게 만드는 보조 역할입니다.</p>
+          <div class="tags"><span class="tag">smooth scroll</span><span class="tag">native scroll</span><span class="tag">GSAP sync</span></div>
+        </article>
+        <article class="library-card" data-step="Motion">
+          <h3>Motion</h3>
+          <p>React에서는 useScroll, useTransform으로 스크롤 값을 컴포저블하게 다룹니다. 3D에서는 R3F와 섞거나 DOM/WebGL 오버레이의 transform/opacity에 쓰기 좋습니다.</p>
+          <div class="tags"><span class="tag">useScroll</span><span class="tag">motion values</span><span class="tag">GPU transforms</span></div>
+        </article>
+        <article class="library-card" data-step="Spline">
+          <h3>Spline</h3>
+          <p>코드보다 시각 툴에서 3D 씬을 빠르게 만들고 싶을 때 좋습니다. Scroll Event와 상태 기반 인터랙션을 만들고 웹으로 export/embed하는 방향입니다.</p>
+          <div class="tags"><span class="tag">no-code 3D</span><span class="tag">scroll event</span><span class="tag">embed/export</span></div>
+        </article>
+        <article class="library-card" data-step="Theatre.js">
+          <h3>Theatre.js</h3>
+          <p>시네마틱한 키프레임 타임라인이 필요할 때 적합합니다. 스크롤 진행률을 Theatre timeline position에 연결하면 제품 쇼케이스식 연출을 만들 수 있습니다.</p>
+          <div class="tags"><span class="tag">timeline</span><span class="tag">keyframe</span><span class="tag">R3F extension</span></div>
+        </article>
+        <article class="library-card" data-step="R3F / Drei / TresJS">
+          <h3>R3F, Drei, TresJS</h3>
+          <p>React라면 R3F+Drei ScrollControls, Vue라면 TresJS 계열을 선택합니다. 둘 다 Three.js를 프레임워크식 컴포넌트 구조로 다루기 위한 층입니다.</p>
+          <div class="tags"><span class="tag">React</span><span class="tag">Vue</span><span class="tag">component scene</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="babylon-panel">
+      <div class="babylon-copy">
+        <h2>Babylon.js 별도 엔진 테스트</h2>
+        <p>Babylon.js는 Three.js의 대안으로, 엔진/툴링/플레이그라운드가 탄탄합니다. 이 패널의 torus knot도 현재 스크롤 위치에 따라 회전과 색상이 변합니다.</p>
+      </div>
+      <div class="babylon-shell">
+        <canvas id="babylonCanvas"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>CDN 로딩이 막힌 환경에서는 해당 카드가 fallback으로 표시됩니다. 실제 프로젝트에는 목적에 맞춰 하나의 3D 엔진과 하나의 스크롤 드라이버만 고르는 편이 좋습니다.</p>
+  </footer>
+
+  <script>
+    (() => {
+      const clamp01 = (v) => Math.max(0, Math.min(1, v));
+      const labelFromProgress = (p) => {
+        if (p < .14) return 'Three.js';
+        if (p < .30) return 'GSAP';
+        if (p < .45) return 'Lenis';
+        if (p < .60) return 'Motion';
+        if (p < .74) return 'Spline';
+        if (p < .88) return 'Theatre.js';
+        return 'R3F / Drei / TresJS';
+      };
+
+      function readProgress() {
+        const lab = document.getElementById('threeLab');
+        if (!lab) return 0;
+        const rect = lab.getBoundingClientRect();
+        const total = Math.max(1, rect.height - innerHeight);
+        return clamp01(-rect.top / total);
+      }
+
+      function applyFloatingProgress(progress = readProgress()) {
+        const shell = document.querySelector('.canvas-shell');
+        if (!shell) return;
+        shell.classList.toggle('floating-stage', progress > 0.04);
+        document.documentElement.style.setProperty('--progress', progress.toFixed(4));
+        const percent = `${Math.round(progress * 100)}%`;
+        const label = labelFromProgress(progress);
+        const progressText = document.getElementById('progressText');
+        const mProgress = document.getElementById('mProgress');
+        const activeLib = document.getElementById('activeLib');
+        const mMode = document.getElementById('mMode');
+        if (progressText) progressText.textContent = percent;
+        if (mProgress) mProgress.textContent = percent;
+        if (activeLib) activeLib.textContent = label;
+        if (mMode) mMode.textContent = label.split(' ')[0];
+        window.dispatchEvent(new Event('resize'));
+      }
+
+      window.__applyLabProgress = applyFloatingProgress;
+      addEventListener('scroll', () => applyFloatingProgress(), { passive: true });
+      addEventListener('resize', () => applyFloatingProgress());
+      addEventListener('DOMContentLoaded', () => applyFloatingProgress());
+    })();
+  </script>
+
+  <script type="module">
+    const status = (name, state, text) => {
+      const el = document.querySelector(`[data-lib="${name}"]`);
+      if (!el) return;
+      el.classList.remove('ok', 'fail', 'info');
+      el.classList.add(state);
+      if (text) el.querySelector('span').textContent = text;
+    };
+
+    const clamp01 = (v) => Math.max(0, Math.min(1, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const labelFromProgress = (p) => {
+      if (p < .14) return 'Three.js';
+      if (p < .30) return 'GSAP';
+      if (p < .45) return 'Lenis';
+      if (p < .60) return 'Motion';
+      if (p < .74) return 'Spline';
+      if (p < .88) return 'Theatre.js';
+      return 'R3F / Drei / TresJS';
+    };
+
+    let lenisInstance = null;
+    let lenisEnabled = true;
+    let updateThree = () => {};
+    let updateBabylon = () => {};
+    let resizeThree = () => {};
+
+    document.getElementById('resetView').addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    document.getElementById('toggleLenis').addEventListener('click', () => {
+      lenisEnabled = !lenisEnabled;
+      if (lenisInstance) {
+        if (lenisEnabled) lenisInstance.start();
+        else lenisInstance.stop();
+      }
+      document.getElementById('toggleLenis').textContent = `Lenis smooth: ${lenisEnabled ? 'on' : 'off'}`;
+    });
+
+    try {
+      const LenisModule = await import('https://esm.sh/lenis@1.3.23');
+      const Lenis = LenisModule.default;
+      lenisInstance = new Lenis({ autoRaf: false, anchors: true });
+      function lenisRaf(time) {
+        if (lenisEnabled) lenisInstance.raf(time);
+        requestAnimationFrame(lenisRaf);
+      }
+      requestAnimationFrame(lenisRaf);
+      status('lenis', 'ok', 'smooth scroll active');
+    } catch (error) {
+      status('lenis', 'fail', 'CDN unavailable; native scroll');
+    }
+
+    try {
+      const THREE = await import('https://esm.sh/three@0.179.1');
+      status('three', 'ok', 'main WebGL scene active');
+
+      const canvas = document.getElementById('threeCanvas');
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(38, 1, .1, 100);
+      camera.position.set(0, 0.6, 7);
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      const geometry = new THREE.TorusKnotGeometry(1.06, .32, 180, 18);
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xd7ff6f,
+        metalness: .55,
+        roughness: .22,
+        emissive: 0x101006,
+      });
+      const knot = new THREE.Mesh(geometry, material);
+      group.add(knot);
+
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(.86, .86, .86),
+        new THREE.MeshStandardMaterial({ color: 0x7dd3ff, metalness: .25, roughness: .38 })
+      );
+      box.position.set(-2.2, -1.1, -.2);
+      group.add(box);
+
+      const sphere = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(.72, 3),
+        new THREE.MeshStandardMaterial({ color: 0xc7a0ff, metalness: .18, roughness: .28 })
+      );
+      sphere.position.set(2.25, 1, -.1);
+      group.add(sphere);
+
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x222211, 1.9));
+      const key = new THREE.PointLight(0xffffff, 24, 14);
+      key.position.set(2.5, 3.8, 4);
+      scene.add(key);
+
+      const resize = () => {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        renderer.setSize(rect.width, rect.height, false);
+        camera.aspect = rect.width / rect.height;
+        camera.updateProjectionMatrix();
+      };
+      resizeThree = resize;
+      addEventListener('resize', resize);
+      resize();
+
+      updateThree = (p) => {
+        const eased = p * p * (3 - 2 * p);
+        group.rotation.y = lerp(0, Math.PI * 2.6, eased);
+        group.rotation.x = lerp(.2, -0.6, p);
+        group.position.x = Math.sin(p * Math.PI * 2) * .8;
+        knot.rotation.z = p * Math.PI * 8;
+        knot.scale.setScalar(lerp(.86, 1.26, Math.sin(p * Math.PI) ** 2));
+        box.rotation.x = p * Math.PI * 7;
+        box.rotation.y = p * Math.PI * 4;
+        sphere.position.y = lerp(1.1, -1.2, p);
+        material.color.setHSL(lerp(.22, .78, p), .86, .62);
+        camera.position.z = lerp(7.2, 5.0, p);
+        camera.lookAt(0, 0, 0);
+      };
+
+      const render = () => {
+        renderer.render(scene, camera);
+        requestAnimationFrame(render);
+      };
+      render();
+    } catch (error) {
+      status('three', 'fail', 'CDN unavailable; canvas disabled');
+      document.querySelector('.canvas-shell').insertAdjacentHTML('beforeend', '<div style="position:absolute;inset:0;display:grid;place-items:center;color:white;padding:24px;text-align:center">Three.js CDN 로딩 실패</div>');
+    }
+
+    try {
+      const gsapModule = await import('https://esm.sh/gsap@3.13.0');
+      const scrollModule = await import('https://esm.sh/gsap@3.13.0/ScrollTrigger');
+      const gsap = gsapModule.gsap || gsapModule.default || gsapModule;
+      const ScrollTrigger = scrollModule.ScrollTrigger || scrollModule.default;
+      gsap.registerPlugin(ScrollTrigger);
+      status('gsap', 'ok', 'ScrollTrigger scrub active');
+
+      ScrollTrigger.create({
+        trigger: '#threeLab',
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: true,
+        onUpdate: (self) => applyProgress(self.progress),
+      });
+    } catch (error) {
+      status('gsap', 'fail', 'using manual scroll progress');
+      addEventListener('scroll', () => {
+        const lab = document.getElementById('threeLab').getBoundingClientRect();
+        const total = Math.max(1, lab.height - innerHeight);
+        applyProgress(clamp01(-lab.top / total));
+      }, { passive: true });
+    }
+
+    try {
+      await import('https://esm.sh/motion@12.23.24');
+      status('motion', 'ok', 'module loaded; useScroll pattern');
+    } catch (error) {
+      status('motion', 'fail', 'pattern shown; module unavailable');
+    }
+
+    try {
+      const BABYLON = await import('https://esm.sh/@babylonjs/core@8.35.0');
+      status('babylon', 'ok', 'secondary engine active');
+      const canvas = document.getElementById('babylonCanvas');
+      const engine = new BABYLON.Engine(canvas, true);
+      const scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+      const camera = new BABYLON.ArcRotateCamera('camera', -Math.PI / 2, Math.PI / 2.35, 5.5, BABYLON.Vector3.Zero(), scene);
+      camera.attachControl(canvas, true);
+      new BABYLON.HemisphericLight('hemi', new BABYLON.Vector3(0, 1, 0), scene).intensity = 1.4;
+      const light = new BABYLON.PointLight('point', new BABYLON.Vector3(2, 3, 3), scene);
+      light.intensity = 120;
+      const mesh = BABYLON.MeshBuilder.CreateTorusKnot('babylonKnot', { radius: 1.15, tube: .28, radialSegments: 128, tubularSegments: 18 }, scene);
+      const mat = new BABYLON.PBRMaterial('material', scene);
+      mat.metallic = .45;
+      mat.roughness = .25;
+      mat.albedoColor = new BABYLON.Color3(.5, .85, 1);
+      mesh.material = mat;
+      updateBabylon = (p) => {
+        mesh.rotation.x = p * Math.PI * 3;
+        mesh.rotation.y = p * Math.PI * 5;
+        mesh.scaling.setAll(lerp(.88, 1.18, Math.sin(p * Math.PI) ** 2));
+        mat.albedoColor = BABYLON.Color3.FromHSV(lerp(190, 330, p), .62, 1);
+      };
+      engine.runRenderLoop(() => scene.render());
+      addEventListener('resize', () => engine.resize());
+    } catch (error) {
+      status('babylon', 'fail', 'CDN unavailable; panel disabled');
+      document.querySelector('.babylon-shell').insertAdjacentHTML('beforeend', '<div style="position:absolute;inset:0;display:grid;place-items:center;color:white;padding:24px;text-align:center">Babylon.js CDN 로딩 실패</div>');
+    }
+
+    function applyProgress(p) {
+      p = clamp01(p);
+      syncFloatingPanel(p);
+      updateThree(p);
+      updateBabylon(p);
+      document.documentElement.style.setProperty('--progress', p.toFixed(4));
+      document.getElementById('progressText').textContent = `${Math.round(p * 100)}%`;
+      document.getElementById('mProgress').textContent = `${Math.round(p * 100)}%`;
+      document.getElementById('mRotation').textContent = (p * Math.PI * 2.6).toFixed(1);
+      const label = labelFromProgress(p);
+      document.getElementById('activeLib').textContent = label;
+      document.getElementById('mMode').textContent = label.split(' ')[0];
+    }
+
+    function syncFloatingPanel(p) {
+      const shell = document.querySelector('.canvas-shell');
+      const shouldFloat = p > 0.04;
+      if (shell.classList.contains('floating-stage') !== shouldFloat) {
+        shell.classList.toggle('floating-stage', shouldFloat);
+        requestAnimationFrame(resizeThree);
+      }
+    }
+
+    function readProgressFromLayout() {
+      const lab = document.getElementById('threeLab').getBoundingClientRect();
+      const total = Math.max(1, lab.height - innerHeight);
+      return clamp01(-lab.top / total);
+    }
+
+    addEventListener('scroll', () => applyProgress(readProgressFromLayout()), { passive: true });
+    addEventListener('resize', () => applyProgress(readProgressFromLayout()));
+    window.__applyLabProgress = applyProgress;
+
+    applyProgress(0);
+  </script>
+</body>
+</html>
